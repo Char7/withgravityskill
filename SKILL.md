@@ -19,6 +19,8 @@ Act as the planner and reviewer. Use Antigravity CLI only as the implementation 
 
 Parse `SOLO`, `PAIR`, or `AUTO` from the user's invocation. Default to `AUTO`.
 
+Parse an optional Antigravity model as `MODEL=<model-id>`. If omitted, let Antigravity use its configured default. A model selection applies only when PAIR runs; if AUTO selects SOLO, state that the requested Antigravity model was not used. Do not guess or silently substitute an unavailable model.
+
 Use SOLO when the change is small, low-risk, normally limited to one or two files, and does not alter public APIs, authentication, authorization, database schemas, concurrency, transactions, or architecture.
 
 Use PAIR when the work spans several files or modules, adds a feature, performs structural refactoring, is mechanically large, or affects a high-risk area.
@@ -80,7 +82,7 @@ Run the bundled wrapper from the repository root:
   -PlanPath '.codex\handoffs\<task-id>\PLAN.md'
 ```
 
-Resolve `<skill-dir>` to this skill's installation directory before running it. `ExecutionPolicy Bypass` applies only to loading this local wrapper in that one PowerShell process; it does not bypass Codex or Antigravity permissions. The wrapper uses `--mode=accept-edits`, never uses `--dangerously-skip-permissions`, and rejects handoff paths outside the repository.
+When the user specified `MODEL`, append `-Model '<model-id>'`; otherwise omit it. Resolve `<skill-dir>` to this skill's installation directory before running it. `ExecutionPolicy Bypass` applies only to loading this local wrapper in that one PowerShell process; it does not bypass Codex or Antigravity permissions. The wrapper validates an explicit model against `agy models`, uses `--mode=accept-edits`, never uses `--dangerously-skip-permissions`, and rejects handoff paths outside the repository.
 
 Wait for Antigravity to finish. Do not edit the same files concurrently. If Antigravity cannot proceed because approval is required, report the exact request; do not bypass permissions.
 
@@ -108,6 +110,8 @@ When review findings exist, invoke:
   -ReviewPath '.codex\handoffs\<task-id>\REVIEW.md'
 ```
 
+When a model was selected, append the same `-Model '<model-id>'` used for implementation. Omit `-Model` throughout when the user did not select one.
+
 Allow at most two Antigravity correction rounds. Re-review and rerun validation after every round. In PAIR mode, do not silently take over implementation; if two rounds fail, stop and report the remaining blockers unless the user authorizes Codex to fix them.
 
 ## Finish safely
@@ -115,11 +119,12 @@ Allow at most two Antigravity correction rounds. Re-review and rerun validation 
 Report:
 
 1. selected mode and reason
-2. task ID for PAIR mode
-3. changed files and behavior
-4. tests and checks run, with results
-5. review findings and correction rounds
-6. remaining risks or unverified behavior
+2. selected Antigravity model, or `Antigravity default`; report `not used` for SOLO
+3. task ID for PAIR mode
+4. changed files and behavior
+5. tests and checks run, with results
+6. review findings and correction rounds
+7. remaining risks or unverified behavior
 
 Do not claim success unless the relevant acceptance criteria pass. Ask before deleting handoff artifacts, and delete only artifacts created for the current task.
 
@@ -129,4 +134,5 @@ Do not claim success unless the relevant acceptance criteria pass. Ask before de
 $withgravityskill AUTO: Add retry handling to the API client.
 $withgravityskill SOLO: Correct the validation message and run its focused test.
 $withgravityskill PAIR: Refactor authentication and add regression coverage.
+$withgravityskill PAIR MODEL=gemini-3.6-flash-high: Refactor authentication and add regression coverage.
 ```
