@@ -14,6 +14,8 @@ param(
 
     [string]$AgyPath,
 
+    [string]$Model,
+
     [ValidateRange(1, 120)]
     [int]$TimeoutMinutes = 20,
 
@@ -88,6 +90,24 @@ if (-not (Test-Path -LiteralPath $resolvedAgy -PathType Leaf)) {
     throw "Antigravity CLI does not exist: $resolvedAgy"
 }
 
+if (-not [string]::IsNullOrWhiteSpace($Model)) {
+    if ($Model -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') {
+        throw "Invalid Antigravity model ID: $Model"
+    }
+
+    $availableModels = @(& $resolvedAgy models) |
+        ForEach-Object { $_.ToString().Trim() } |
+        Where-Object { $_ -match '^[A-Za-z0-9][A-Za-z0-9._-]*$' }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to list Antigravity models; agy exited with code $LASTEXITCODE."
+    }
+
+    if ($availableModels -notcontains $Model) {
+        throw "Antigravity model '$Model' is not available. Available models: $($availableModels -join ', ')"
+    }
+}
+
 $rootPrefix = $resolvedRoot + [System.IO.Path]::DirectorySeparatorChar
 $planRelative = $resolvedPlan.Substring($rootPrefix.Length).Replace('\', '/')
 $reviewRelative = if ($null -ne $resolvedReview) {
@@ -130,12 +150,17 @@ Rules:
 "@
 }
 
-$agyArguments = @(
+$agyOptions = @(
     '--mode=accept-edits'
     "--print-timeout=$($TimeoutMinutes)m"
-    '--print'
-    $prompt
 )
+
+if (-not [string]::IsNullOrWhiteSpace($Model)) {
+    $agyOptions += "--model=$Model"
+}
+
+$agyOptions += '--print'
+$agyArguments = $agyOptions + @($prompt)
 
 if ($DryRun) {
     [pscustomobject]@{
@@ -144,7 +169,8 @@ if ($DryRun) {
         AgyPath     = $resolvedAgy
         PlanPath    = $planRelative
         ReviewPath  = $reviewRelative
-        Arguments   = $agyArguments[0..2] -join ' '
+        Model        = if ([string]::IsNullOrWhiteSpace($Model)) { '(Antigravity default)' } else { $Model }
+        Arguments    = $agyOptions -join ' '
         Prompt      = $prompt.Trim()
     }
     exit 0

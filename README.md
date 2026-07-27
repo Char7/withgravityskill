@@ -68,13 +68,27 @@ Force the planning and handoff workflow:
 $withgravityskill PAIR: Refactor authentication and add regression coverage.
 ```
 
+Select an Antigravity model explicitly:
+
+```text
+$withgravityskill PAIR MODEL=gemini-3.6-flash-high: Refactor authentication and add regression coverage.
+```
+
+`MODEL=<model-id>` is optional. When omitted, Antigravity uses its configured default. The wrapper validates an explicit model against the output of `agy models` before implementation starts. If AUTO selects SOLO, Codex reports that the Antigravity model was not used.
+
+List the models currently available to your Antigravity account with:
+
+```powershell
+agy models
+```
+
 ## PAIR execution
 
 In PAIR mode, Codex:
 
 1. Reads applicable repository instructions and checks the working tree.
 2. Creates a task-specific plan under `.codex/handoffs/<task-id>/PLAN.md`.
-3. Invokes Antigravity with `--mode=accept-edits`.
+3. Invokes Antigravity with `--mode=accept-edits` and the selected `--model`, when provided.
 4. Reviews the resulting Git diff independently and runs relevant checks.
 5. Writes actionable findings to `REVIEW.md` and allows at most two correction rounds.
 
