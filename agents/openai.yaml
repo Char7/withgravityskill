@@ -1,0 +1,7 @@
+interface:
+  display_name: "With Gravity"
+  short_description: "Plan with Codex, implement with Antigravity"
+  default_prompt: "Use $withgravityskill in AUTO mode to plan, implement, and review this coding task."
+
+policy:
+  allow_implicit_invocation: false
