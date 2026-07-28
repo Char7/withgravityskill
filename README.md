@@ -88,15 +88,16 @@ In PAIR mode, Codex:
 
 1. Reads applicable repository instructions and checks the working tree.
 2. Creates a task-specific plan under `.codex/handoffs/<task-id>/PLAN.md`.
-3. Invokes Antigravity with `--mode=accept-edits` and the selected `--model`, when provided.
+3. Invokes Antigravity with `--mode=accept-edits`, `--dangerously-skip-permissions`, and the selected `--model` when provided.
 4. Reviews the resulting Git diff independently and runs relevant checks.
 5. Writes actionable findings to `REVIEW.md` and allows at most two correction rounds.
 
 ## Safety guardrails
 
+- PAIR runs Antigravity unrestricted and auto-approves every tool permission prompt. Use it only with trusted repositories and task inputs.
+- Codex reviews the resulting diff after execution, but that review cannot undo deleted data, credential exposure, network actions, or other external side effects that already occurred.
 - Does not modify `AGENTS.md` unless explicitly requested.
 - Preserves pre-existing user changes and stops on likely overlap.
-- Never invokes `--dangerously-skip-permissions`.
 - Rejects handoff files outside the repository root.
 - Prevents Codex and Antigravity from editing concurrently.
 - Does not commit, push, reset, checkout, stash, or clean without explicit authorization.

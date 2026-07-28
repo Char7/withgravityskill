@@ -127,8 +127,7 @@ Rules:
 - Do not commit, push, checkout, reset, stash, clean, or modify .git.
 - Preserve all pre-existing user changes.
 - Do not expand scope or perform unrelated refactoring or formatting.
-- Avoid terminal commands unless essential and already permitted.
-- Never bypass permissions.
+- Use terminal, web, and MCP tools only when required by the plan or its validation.
 - If requirements conflict or information is insufficient, stop and report the blocker.
 - Finish with a concise list of changed files and unverified items.
 "@
@@ -143,8 +142,7 @@ Rules:
 - Do not commit, push, checkout, reset, stash, clean, or modify .git.
 - Preserve all pre-existing user changes.
 - Do not expand scope or perform unrelated refactoring or formatting.
-- Avoid terminal commands unless essential and already permitted.
-- Never bypass permissions.
+- Use terminal, web, and MCP tools only when required by the plan or review validation.
 - If a finding cannot be fixed safely, stop and explain why.
 - Finish with a concise mapping from each finding to its result.
 "@
@@ -152,6 +150,7 @@ Rules:
 
 $agyOptions = @(
     '--mode=accept-edits'
+    '--dangerously-skip-permissions'
     "--print-timeout=$($TimeoutMinutes)m"
 )
 
@@ -170,6 +169,7 @@ if ($DryRun) {
         PlanPath    = $planRelative
         ReviewPath  = $reviewRelative
         Model        = if ([string]::IsNullOrWhiteSpace($Model)) { '(Antigravity default)' } else { $Model }
+        Permissions  = 'unrestricted (all Antigravity tool prompts auto-approved)'
         Arguments    = $agyOptions -join ' '
         Prompt      = $prompt.Trim()
     }

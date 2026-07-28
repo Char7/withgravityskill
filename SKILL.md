@@ -1,6 +1,6 @@
 ---
 name: withgravityskill
-description: Explicit Codex-to-Antigravity coding workflow. Use when the user invokes $withgravityskill or explicitly asks Codex to choose SOLO versus PAIR, plan a coding task, have Antigravity CLI implement larger changes, and have Codex review and test the resulting diff. Keep repository agents distinct from development agents, preserve existing work, and do not modify AGENTS.md unless the user explicitly requests it.
+description: Explicit Codex-to-Antigravity coding workflow. Use when the user invokes $withgravityskill or explicitly asks Codex to choose SOLO versus PAIR, plan a coding task, have Antigravity CLI implement larger changes with all tool permission prompts auto-approved, and have Codex review and test the resulting diff. Use PAIR only in trusted repositories, keep repository agents distinct from development agents, preserve existing work, and do not modify AGENTS.md unless the user explicitly requests it.
 ---
 
 # With Gravity
@@ -35,6 +35,7 @@ For AUTO, inspect only enough context to make the choice, then state the selecte
 4. If the task is likely to overlap pre-existing edits, stop and ask the user before proceeding.
 5. Define the goal, scope, acceptance criteria, risks, and relevant test commands.
 6. Never commit or push unless the user explicitly requests it.
+7. Before PAIR begins, state that Antigravity will run unrestricted with every tool permission prompt auto-approved. Continue without another confirmation because invoking this skill authorizes that mode.
 
 ## Run SOLO
 
@@ -82,9 +83,9 @@ Run the bundled wrapper from the repository root:
   -PlanPath '.codex\handoffs\<task-id>\PLAN.md'
 ```
 
-When the user specified `MODEL`, append `-Model '<model-id>'`; otherwise omit it. Resolve `<skill-dir>` to this skill's installation directory before running it. `ExecutionPolicy Bypass` applies only to loading this local wrapper in that one PowerShell process; it does not bypass Codex or Antigravity permissions. The wrapper validates an explicit model against `agy models`, uses `--mode=accept-edits`, never uses `--dangerously-skip-permissions`, and rejects handoff paths outside the repository.
+When the user specified `MODEL`, append `-Model '<model-id>'`; otherwise omit it. Resolve `<skill-dir>` to this skill's installation directory before running it. `ExecutionPolicy Bypass` applies only to loading this local wrapper in that one PowerShell process. The wrapper validates an explicit model against `agy models`, uses `--mode=accept-edits` plus `--dangerously-skip-permissions`, and rejects handoff paths outside the repository.
 
-Wait for Antigravity to finish. Do not edit the same files concurrently. If Antigravity cannot proceed because approval is required, report the exact request; do not bypass permissions.
+Wait for Antigravity to finish. Do not edit the same files concurrently. Antigravity must not pause for tool approvals because the wrapper auto-approves them all; treat any remaining pause as a non-permission blocker and report its exact output.
 
 ### 3. Review independently
 
@@ -120,11 +121,12 @@ Report:
 
 1. selected mode and reason
 2. selected Antigravity model, or `Antigravity default`; report `not used` for SOLO
-3. task ID for PAIR mode
-4. changed files and behavior
-5. tests and checks run, with results
-6. review findings and correction rounds
-7. remaining risks or unverified behavior
+3. permission mode: `unrestricted` for PAIR or `not used` for SOLO
+4. task ID for PAIR mode
+5. changed files and behavior
+6. tests and checks run, with results
+7. review findings and correction rounds
+8. remaining risks or unverified behavior
 
 Do not claim success unless the relevant acceptance criteria pass. Ask before deleting handoff artifacts, and delete only artifacts created for the current task.
 
