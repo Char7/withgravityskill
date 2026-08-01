@@ -1,7 +1,7 @@
 interface:
   display_name: "With Gravity"
-  short_description: "Plan with Codex, implement with Antigravity"
-  default_prompt: "Use $withgravityskill in AUTO mode, optionally with MODEL=<model-id>, to plan, implement, and review this coding task."
+  short_description: "Align the plan, implement with Antigravity, review with Codex"
+  default_prompt: "Use $withgravityskill in AUTO mode, optionally with MODEL=<model-id>, to align the plan with Antigravity before implementation and have Codex review the result."
 
 policy:
   allow_implicit_invocation: false
