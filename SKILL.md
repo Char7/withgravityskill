@@ -1,6 +1,6 @@
 ---
 name: withgravityskill
-description: Explicit Codex-to-Antigravity coding workflow. Use when the user invokes $withgravityskill or explicitly asks Codex to choose SOLO versus PAIR, plan a coding task, have Antigravity CLI implement larger changes with all tool permission prompts auto-approved, and have Codex review and test the resulting diff. Use PAIR only in trusted repositories, keep repository agents distinct from development agents, preserve existing work, and do not modify AGENTS.md unless the user explicitly requests it.
+description: Explicit Codex-to-Antigravity coding workflow with a mandatory plan-alignment gate. Use when the user invokes $withgravityskill or explicitly asks Codex to choose SOLO versus PAIR, have Antigravity restate and clarify a Codex plan before implementation, implement approved larger changes with all tool permission prompts auto-approved, and have Codex review and test the resulting diff. Use PAIR only in trusted repositories, preserve existing work, and do not modify AGENTS.md unless the user explicitly requests it.
 ---
 
 # With Gravity
@@ -54,8 +54,14 @@ Create a unique task ID such as `login-retry-20260727-1430`. Store task-only art
 
 ```text
 .codex/handoffs/<task-id>/PLAN.md
+.codex/handoffs/<task-id>/UNDERSTANDING-01.md
+.codex/handoffs/<task-id>/CLARIFICATION-01.md
+.codex/handoffs/<task-id>/UNDERSTANDING-02.md
+.codex/handoffs/<task-id>/APPROVED.md
 .codex/handoffs/<task-id>/REVIEW.md
 ```
+
+Create clarification and understanding files only when that round occurs. A second clarification round uses `CLARIFICATION-02.md` and `UNDERSTANDING-03.md`. Never overwrite an alignment artifact.
 
 Do not overwrite an existing task directory. `PLAN.md` must include:
 
@@ -71,7 +77,54 @@ Do not overwrite an existing task directory. `PLAN.md` must include:
 
 Do not put secrets or credentials in handoff files. Do not edit production code during this planning phase.
 
-### 2. Invoke Antigravity
+### 2. Run the plan-alignment gate
+
+Invoke Antigravity in plan mode and capture its first understanding:
+
+```powershell
+& 'powershell.exe' -NoProfile -ExecutionPolicy Bypass `
+  -File '<skill-dir>\scripts\invoke-antigravity.ps1' `
+  -Phase confirm `
+  -RepoRoot '<repository-root>' `
+  -PlanPath '.codex\handoffs\<task-id>\PLAN.md' `
+  -ResponsePath '.codex\handoffs\<task-id>\UNDERSTANDING-01.md'
+```
+
+When the user specified `MODEL`, append `-Model '<model-id>'` to every Antigravity phase. Inspect the response against `PLAN.md`; do not accept Antigravity's `READY` statement by itself. Approve only when all of these hold:
+
+- the objective, current behavior, and desired behavior match the plan
+- every acceptance criterion is accurately restated
+- proposed files and code paths are plausible and within scope
+- non-goals, prohibited changes, edge cases, and tests are preserved
+- assumptions are supported and no material question remains
+- applicable repository instructions are not contradicted
+
+If alignment fails, write specific mismatches and questions to `CLARIFICATION-01.md`, then invoke:
+
+```powershell
+& 'powershell.exe' -NoProfile -ExecutionPolicy Bypass `
+  -File '<skill-dir>\scripts\invoke-antigravity.ps1' `
+  -Phase clarify `
+  -RepoRoot '<repository-root>' `
+  -PlanPath '.codex\handoffs\<task-id>\PLAN.md' `
+  -UnderstandingPath '.codex\handoffs\<task-id>\UNDERSTANDING-01.md' `
+  -ClarificationPath '.codex\handoffs\<task-id>\CLARIFICATION-01.md' `
+  -ResponsePath '.codex\handoffs\<task-id>\UNDERSTANDING-02.md'
+```
+
+Allow at most two clarification rounds. For the second round, use the latest understanding as input and the `-02` clarification and `-03` response paths. If material uncertainty remains after two rounds, stop and ask the user; do not implement.
+
+When alignment passes, calculate SHA-256 for `PLAN.md` and the accepted understanding, then create `APPROVED.md` with exactly these fields:
+
+```text
+status: APPROVED
+plan_sha256: <64-character SHA-256>
+understanding_sha256: <64-character SHA-256>
+```
+
+Use `Get-FileHash -Algorithm SHA256 -LiteralPath '<path>'` to calculate each hash. The wrapper rejects implementation if either approved file changes. If the plan must change after approval, abandon that approval, create a new task ID, and run alignment again.
+
+### 3. Invoke Antigravity
 
 Run the bundled wrapper from the repository root:
 
@@ -80,14 +133,16 @@ Run the bundled wrapper from the repository root:
   -File '<skill-dir>\scripts\invoke-antigravity.ps1' `
   -Phase implement `
   -RepoRoot '<repository-root>' `
-  -PlanPath '.codex\handoffs\<task-id>\PLAN.md'
+  -PlanPath '.codex\handoffs\<task-id>\PLAN.md' `
+  -UnderstandingPath '.codex\handoffs\<task-id>\UNDERSTANDING-<accepted-round>.md' `
+  -ApprovalPath '.codex\handoffs\<task-id>\APPROVED.md'
 ```
 
-When the user specified `MODEL`, append `-Model '<model-id>'`; otherwise omit it. Resolve `<skill-dir>` to this skill's installation directory before running it. `ExecutionPolicy Bypass` applies only to loading this local wrapper in that one PowerShell process. The wrapper validates an explicit model against `agy models`, uses `--mode=accept-edits` plus `--dangerously-skip-permissions`, and rejects handoff paths outside the repository.
+Resolve `<skill-dir>` to this skill's installation directory before running it. `ExecutionPolicy Bypass` applies only to loading this local wrapper in that one PowerShell process. The wrapper validates an explicit model against `agy models`, verifies the approval hashes, uses `--mode=accept-edits` plus `--dangerously-skip-permissions`, and rejects handoff paths outside the repository.
 
 Wait for Antigravity to finish. Do not edit the same files concurrently. Antigravity must not pause for tool approvals because the wrapper auto-approves them all; treat any remaining pause as a non-permission blocker and report its exact output.
 
-### 3. Review independently
+### 4. Review independently
 
 Do not trust Antigravity's summary as validation.
 
@@ -98,7 +153,7 @@ Do not trust Antigravity's summary as validation.
 5. Run the relevant tests, lint, type checks, and build commands.
 6. Record actionable findings in `REVIEW.md`, including priority, file or location, impact, expected behavior, and verification method.
 
-### 4. Request corrections
+### 5. Request corrections
 
 When review findings exist, invoke:
 
@@ -108,6 +163,8 @@ When review findings exist, invoke:
   -Phase revise `
   -RepoRoot '<repository-root>' `
   -PlanPath '.codex\handoffs\<task-id>\PLAN.md' `
+  -UnderstandingPath '.codex\handoffs\<task-id>\UNDERSTANDING-<accepted-round>.md' `
+  -ApprovalPath '.codex\handoffs\<task-id>\APPROVED.md' `
   -ReviewPath '.codex\handoffs\<task-id>\REVIEW.md'
 ```
 
@@ -123,10 +180,11 @@ Report:
 2. selected Antigravity model, or `Antigravity default`; report `not used` for SOLO
 3. permission mode: `unrestricted` for PAIR or `not used` for SOLO
 4. task ID for PAIR mode
-5. changed files and behavior
-6. tests and checks run, with results
-7. review findings and correction rounds
-8. remaining risks or unverified behavior
+5. alignment result, accepted understanding file, and clarification rounds
+6. changed files and behavior
+7. tests and checks run, with results
+8. review findings and correction rounds
+9. remaining risks or unverified behavior
 
 Do not claim success unless the relevant acceptance criteria pass. Ask before deleting handoff artifacts, and delete only artifacts created for the current task.
 
